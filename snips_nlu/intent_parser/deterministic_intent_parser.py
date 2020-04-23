@@ -7,8 +7,7 @@ from builtins import str
 from collections import defaultdict
 from pathlib import Path
 
-from future.utils import iteritems, iterkeys, itervalues
-from snips_nlu_utils import normalize
+from future.utils import iteritems, itervalues
 
 from snips_nlu.common.dataset_utils import get_slot_name_mappings
 from snips_nlu.common.log_utils import log_elapsed_time, log_result
@@ -22,7 +21,7 @@ from snips_nlu.constants import (
     RES_MATCH_RANGE, RES_SLOTS, RES_VALUE, SLOT_NAME, START, TEXT, UTTERANCES,
     RES_PROBA)
 from snips_nlu.dataset import validate_and_format_dataset
-from snips_nlu.dataset.utils import extract_entity_values
+from snips_nlu.dataset.utils import get_stop_words_whitelist
 from snips_nlu.entity_parser.builtin_entity_parser import is_builtin_entity
 from snips_nlu.exceptions import IntentNotFoundError, LoadingError
 from snips_nlu.intent_parser.intent_parser import IntentParser
@@ -133,7 +132,7 @@ class DeterministicIntentParser(IntentParser):
         logger, logging.INFO, "Fitted deterministic parser in {elapsed_time}")
     def fit(self, dataset, force_retrain=True):
         """Fits the intent parser with a valid Snips dataset"""
-        logger.info("Fitting deterministic parser...")
+        logger.info("Fitting deterministic intent parser...")
         dataset = validate_and_format_dataset(dataset)
         self.load_resources_if_needed(dataset[LANGUAGE])
         self.fit_builtin_entity_parser_if_needed(dataset)
@@ -144,7 +143,7 @@ class DeterministicIntentParser(IntentParser):
         self.slot_names_to_entities = get_slot_name_mappings(dataset)
         self.group_names_to_slot_names = _get_group_names_to_slot_names(
             self.slot_names_to_entities)
-        self._stop_words_whitelist = _get_stop_words_whitelist(
+        self._stop_words_whitelist = get_stop_words_whitelist(
             dataset, self._stop_words)
 
         # Do not use ambiguous patterns that appear in more than one intent
@@ -203,7 +202,7 @@ class DeterministicIntentParser(IntentParser):
             if top_intents:
                 intent = top_intents[0][RES_INTENT]
                 slots = top_intents[0][RES_SLOTS]
-                if intent[RES_PROBA] < 1.0:
+                if intent[RES_PROBA] <= 0.5:
                     # return None in case of ambiguity
                     return empty_result(text, probability=1.0)
                 return parsing_result(text, intent, slots)
@@ -240,25 +239,27 @@ class DeterministicIntentParser(IntentParser):
             cleaned_processed_text = self._preprocess_text(processed_text,
                                                            intent)
             for regex in self.regexes_per_intent[intent]:
-                res = self._get_matching_result(text, cleaned_processed_text,
-                                                regex, intent, mapping)
+                res = self._get_matching_result(text, cleaned_text, regex,
+                                                intent)
                 if res is None and cleaned_text != cleaned_processed_text:
-                    res = self._get_matching_result(text, cleaned_text, regex,
-                                                    intent)
+                    res = self._get_matching_result(
+                        text, cleaned_processed_text, regex, intent, mapping)
+
                 if res is not None:
                     results.append(res)
                     break
 
-        confidence_score = 1.
-        if results:
-            confidence_score = 1. / float(len(results))
+        # In some rare cases there can be multiple ambiguous intents
+        # In such cases, priority is given to results containing fewer slots
+        weights = [1.0 / (1.0 + len(res[RES_SLOTS])) for res in results]
+        total_weight = sum(weights)
 
-        results = results[:top_n]
+        for res, weight in zip(results, weights):
+            res[RES_INTENT][RES_PROBA] = weight / total_weight
 
-        for res in results:
-            res[RES_INTENT][RES_PROBA] = confidence_score
+        results = sorted(results, key=lambda r: -r[RES_INTENT][RES_PROBA])
 
-        return results
+        return results[:top_n]
 
     @fitted_required
     def get_intents(self, text):
@@ -300,6 +301,7 @@ class DeterministicIntentParser(IntentParser):
 
         if intent not in self.regexes_per_intent:
             raise IntentNotFoundError(intent)
+
         slots = self.parse(text, intents=[intent])[RES_SLOTS]
         if slots is None:
             slots = []
@@ -377,6 +379,8 @@ class DeterministicIntentParser(IntentParser):
 
     def _utterance_to_pattern(self, utterance, stop_words,
                               entity_placeholders):
+        from snips_nlu_utils import normalize
+
         slot_names_count = defaultdict(int)
         pattern = []
         for chunk in utterance[DATA]:
@@ -406,7 +410,7 @@ class DeterministicIntentParser(IntentParser):
         parser_json = json_string(self.to_dict())
         parser_path = path / "intent_parser.json"
 
-        with parser_path.open(mode="w") as f:
+        with parser_path.open(mode="w", encoding="utf8") as f:
             f.write(parser_json)
         self.persist_metadata(path)
 
@@ -482,7 +486,7 @@ def _get_range_shift(matched_range, ranges_mapping):
 
 def _get_group_names_to_slot_names(slot_names_mapping):
     slot_names = {slot_name for mapping in itervalues(slot_names_mapping)
-                  for slot_name in iterkeys(mapping)}
+                  for slot_name in mapping}
     return {"group%s" % i: name
             for i, name in enumerate(sorted(slot_names))}
 
@@ -512,14 +516,3 @@ def _deduplicate_overlapping_slots(slots, language):
 def _get_entity_name_placeholder(entity_label, language):
     return "%%%s%%" % "".join(
         tokenize_light(entity_label, language)).upper()
-
-
-def _get_stop_words_whitelist(dataset, stop_words):
-    entity_values_per_intent = extract_entity_values(
-        dataset, apply_normalization=True)
-    stop_words_whitelist = dict()
-    for intent, entity_values in iteritems(entity_values_per_intent):
-        whitelist = stop_words.intersection(entity_values)
-        if whitelist:
-            stop_words_whitelist[intent] = whitelist
-    return stop_words_whitelist

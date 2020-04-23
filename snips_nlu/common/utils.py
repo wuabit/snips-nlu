@@ -3,17 +3,16 @@ from __future__ import unicode_literals
 import importlib
 import json
 import numbers
+import re
 from builtins import bytes as newbytes, str as newstr
 from datetime import datetime
 from functools import wraps
 from pathlib import Path
 
-import numpy as np
-import pkg_resources
 from future.utils import text_type
 
-from snips_nlu.constants import (
-    END, START, RES_MATCH_RANGE, ENTITY_KIND, RES_VALUE)
+from snips_nlu.constants import (END, ENTITY_KIND, RES_MATCH_RANGE, RES_VALUE,
+                                 START)
 from snips_nlu.exceptions import NotTrained, PersistingError
 
 REGEX_PUNCT = {'\\', '.', '+', '*', '?', '(', ')', '|', '[', ']', '{', '}',
@@ -55,6 +54,8 @@ def check_random_state(seed):
     If seed is already a RandomState instance, return it.
     Otherwise raise ValueError.
     """
+    import numpy as np
+
     # pylint: disable=W0212
     # pylint: disable=c-extension-no-member
     if seed is None or seed is np.random:
@@ -137,6 +138,8 @@ def is_package(name):
         bool: True if an installed packaged corresponds to this name, False
             otherwise.
     """
+    import pkg_resources
+
     name = name.lower().replace("-", "_")
     packages = pkg_resources.working_set.by_key.keys()
     for package in packages:
@@ -160,6 +163,10 @@ def get_package_path(name):
 
 
 def deduplicate_overlapping_items(items, overlap_fn, sort_key_fn):
+    """Deduplicates the items by looping over the items, sorted using
+    sort_key_fn, and checking overlaps with previously seen items using
+    overlap_fn
+    """
     sorted_items = sorted(items, key=sort_key_fn)
     deduplicated_items = []
     for item in sorted_items:
@@ -170,6 +177,9 @@ def deduplicate_overlapping_items(items, overlap_fn, sort_key_fn):
 
 
 def replace_entities_with_placeholders(text, entities, placeholder_fn):
+    """Processes the text in order to replace entity values with placeholders
+    as defined by the placeholder function
+    """
     if not entities:
         return dict(), text
 
@@ -204,6 +214,8 @@ def replace_entities_with_placeholders(text, entities, placeholder_fn):
 
 
 def deduplicate_overlapping_entities(entities):
+    """Deduplicates entities based on overlapping ranges"""
+
     def overlap(lhs_entity, rhs_entity):
         return ranges_overlap(lhs_entity[RES_MATCH_RANGE],
                               rhs_entity[RES_MATCH_RANGE])
@@ -215,3 +227,24 @@ def deduplicate_overlapping_entities(entities):
         entities, overlap, sort_key_fn)
     return sorted(deduplicated_entities,
                   key=lambda entity: entity[RES_MATCH_RANGE][START])
+
+
+SEMVER_PATTERN = r"^(?P<major>0|[1-9]\d*)" \
+                 r".(?P<minor>0|[1-9]\d*)" \
+                 r".(?P<patch>0|[1-9]\d*)" \
+                 r"(?:.(?P<subpatch>0|[1-9]\d*))?" \
+                 r"(?:-(?P<prerelease>(?:0|[1-9]\d*|\d*[a-zA-Z-]" \
+                 r"[0-9a-zA-Z-]*)" \
+                 r"(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?" \
+                 r"(?:\+(?P<buildmetadata>[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*)" \
+                 r")?$"
+SEMVER_REGEX = re.compile(SEMVER_PATTERN)
+
+
+def parse_version(string_version):
+    match = SEMVER_REGEX.match(string_version)
+    if match is None:
+        msg = "Invalid version: %s. Accepted versions must match the" \
+              " following regex pattern: %s" % (string_version, SEMVER_PATTERN)
+        raise ValueError(msg)
+    return match.groupdict()

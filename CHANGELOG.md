@@ -1,12 +1,77 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
-## [0.19.6]
+## [0.20.2] - 2020-01-15
+### Added
+- Add intents filter parameter in parsing CLI [#858](https://github.com/snipsco/snips-nlu/pull/858)
+- Add documentation about intents filters [#858](https://github.com/snipsco/snips-nlu/pull/858)
+- Update dependencies for better python3.8 support [#867](https://github.com/snipsco/snips-nlu/pull/867)
+
+## [0.20.1] - 2019-09-04
+### Added
+- Allow to bypass the model version check [#830](https://github.com/snipsco/snips-nlu/pull/830)
+- Persist `CustomEntityParser` license when needed [#832](https://github.com/snipsco/snips-nlu/pull/832)
+- Document metrics CLI [#839](https://github.com/snipsco/snips-nlu/pull/839)
+- Allow to fit SnipsNLUEngine with a `Dataset` object [#840](https://github.com/snipsco/snips-nlu/pull/840)
+
+### Changed
+- Update `snips-nlu-parsers` dependency upper bound to 0.5 [#850](https://github.com/snipsco/snips-nlu/pull/850)
+
+### Fixed
+- Invalidate importlib caches after dynamically installing module [#838](https://github.com/snipsco/snips-nlu/pull/838)
+- Automatically generate documentation for supported languages and builtin entities [#841](https://github.com/snipsco/snips-nlu/pull/841)
+- Fix issue when cleaning up crfsuite files [#843](https://github.com/snipsco/snips-nlu/pull/843)
+- Fix filemode of persisted crfsuite files [#844](https://github.com/snipsco/snips-nlu/pull/844)
+
+## [0.20.0] - 2019-07-16
+### Added
+- Add new intent parser: `LookupIntentParser` [#759](https://github.com/snipsco/snips-nlu/pull/759)
+
+### Changed
+- Replace `DeterministicIntentParser` by `LookupIntentParser` in default configs [#829](https://github.com/snipsco/snips-nlu/pull/829)
+- Bumped `snips-nlu-parsers` to `0.3.x` introducing new builtin entities:
+    - `snips/time`
+    - `snips/timePeriod`
+    - `snips/date`
+    - `snips/datePeriod`
+    - `snips/city`
+    - `snips/country`
+    - `snips/region`
+    
+
+## [0.19.8] - 2019-07-10
+### Added
+- Add filter for entity match feature [#814](https://github.com/snipsco/snips-nlu/pull/814)
+- Add noise re-weight factor in `LogRegIntentClassifier` [#815](https://github.com/snipsco/snips-nlu/pull/815)
+- Add warning logs and improve errors [#821](https://github.com/snipsco/snips-nlu/pull/821)
+- Add random seed parameter in training CLI [#819](https://github.com/snipsco/snips-nlu/pull/819)
+
+### Fixed
+- Fix non-deterministic behavior [#817](https://github.com/snipsco/snips-nlu/pull/817)
+- Import modules lazily to speed up CLI startup time [#819](https://github.com/snipsco/snips-nlu/pull/819)
+- Removed dependency on `semantic_version` to accept `"subpatches"` number [#825](https://github.com/snipsco/snips-nlu/pull/825)
+
+## [0.19.7] - 2019-06-20
+### Changed
+- Re-score ambiguous `DeterministicIntentParser` results based on slots [#791](https://github.com/snipsco/snips-nlu/pull/791)
+- Accept ambiguous results from `DeterministicIntentParser` when confidence score is above 0.5 [#797](https://github.com/snipsco/snips-nlu/pull/797)
+- Avoid generating number variations when not needed [#799](https://github.com/snipsco/snips-nlu/pull/799)
+- Moved the NLU random state from the config to the shared resources [#801](https://github.com/snipsco/snips-nlu/pull/801)
+- Reduce custom entity parser footprint in training time [#804](https://github.com/snipsco/snips-nlu/pull/804)
+- Bumped `scikit-learn` to `>=0.21,<0.22` for `python>=3.5` and `>=0.20<0.21` for `python<3.5` [#801](https://github.com/snipsco/snips-nlu/pull/801)
+- Update dependencies [#811](https://github.com/snipsco/snips-nlu/pull/811) 
+
+### Fixed
+- Fixed a couple of bugs in the data augmentation which were making the NLU training non-deterministic [#801](https://github.com/snipsco/snips-nlu/pull/801)
+- Remove deprecated code in dataset generation [#803](https://github.com/snipsco/snips-nlu/pull/803)
+- Fix possible override of entity values when generating variations [#808](https://github.com/snipsco/snips-nlu/pull/808)
+
+## [0.19.6] - 2019-04-26
 ### Fixed
 - Raise an error when using unknown intents in intents filter [#788](https://github.com/snipsco/snips-nlu/pull/788)
 - Fix issue with stop words in `DeterministicIntentParser` [#789](https://github.com/snipsco/snips-nlu/pull/789)
 
-## [0.19.5]
+## [0.19.5] - 2019-04-10
 ### Added
 - Advanced inference logging in the `CRFSlotFiller` [#776](https://github.com/snipsco/snips-nlu/pull/776)
 - Improved failed linking error message after download of resources [#774](https://github.com/snipsco/snips-nlu/pull/774)
@@ -34,7 +99,7 @@ All notable changes to this project will be documented in this file.
 - Wrong required resources of the `DeterministicIntentParser`
 - Issue with non ASCII characters when using the parsing CLI with Python2 
 
-## [0.19.2] - 2019-02-11
+## [0.19.2] - 2019-02-11
 ### Fixed
 - Fix an issue regarding the way builtin entities were handled by the `CRFSlotFiller`
 
@@ -269,6 +334,10 @@ several commands.
 - Fix compiling issue with `bindgen` dependency when installing from source
 - Fix issue in `CRFSlotFiller` when handling builtin entities
 
+[0.20.1]: https://github.com/snipsco/snips-nlu/compare/0.20.0...0.20.1
+[0.20.0]: https://github.com/snipsco/snips-nlu/compare/0.19.8...0.20.0
+[0.19.8]: https://github.com/snipsco/snips-nlu/compare/0.19.7...0.19.8
+[0.19.7]: https://github.com/snipsco/snips-nlu/compare/0.19.6...0.19.7
 [0.19.6]: https://github.com/snipsco/snips-nlu/compare/0.19.5...0.19.6
 [0.19.5]: https://github.com/snipsco/snips-nlu/compare/0.19.4...0.19.5
 [0.19.4]: https://github.com/snipsco/snips-nlu/compare/0.19.3...0.19.4

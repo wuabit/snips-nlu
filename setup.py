@@ -17,22 +17,21 @@ with io.open(os.path.join(root, "README.rst"), encoding="utf8") as f:
     readme = f.read()
 
 required = [
+    "deprecation>=2.0,<3.0",
     "enum34>=1.1,<2.0; python_version<'3.4'",
-    "future>=0.16,<0.17",
-    "numpy>=1.15,<1.16",
-    "scipy>=1.0,<2.0",
-    "scikit-learn>=0.19,<0.20",
-    "sklearn-crfsuite>=0.3.6,<0.4",
-    "semantic_version>=2.6,<3.0",
-    "snips-nlu-utils>=0.8,<0.9",
-    "snips-nlu-parsers>=0.2,<0.3",
+    "funcsigs>=1.0,<2.0; python_version<'3.4'",
+    "future>=0.16,<0.18",
     "num2words>=0.5.6,<0.6",
-    "plac>=0.9.6,<1.0",
+    "numpy>=1.15,<2.0",
+    "pathlib>=1.0,<2.0; python_version<'3.4'",
+    "pyaml>=17.0,<20.0",
     "requests>=2.0,<3.0",
-    "pathlib==1.0.1; python_version < '3.4'",
-    "pyaml>=17,<18",
-    "deprecation>=2,<3",
-    "funcsigs>=1.0,<2.0; python_version < '3.4'"
+    "scikit-learn>=0.20,<0.21; python_version<'3.5'",
+    "scikit-learn>=0.21.1,<0.23; python_version>='3.5'",
+    "scipy>=1.0,<2.0",
+    "sklearn-crfsuite>=0.3.6,<0.4",
+    "snips-nlu-parsers>=0.3.1,<0.5",
+    "snips-nlu-utils>=0.9,<0.10",
 ]
 
 extras_require = {
@@ -43,13 +42,14 @@ extras_require = {
         "sphinx-tabs>=1.1,<1.2"
     ],
     "metrics": [
-        "snips_nlu_metrics>=0.14.1,<0.15",
+        "snips-nlu-metrics>=0.14.1,<0.15",
     ],
     "test": [
         "mock>=2.0,<3.0",
-        "snips_nlu_metrics>=0.14.1,<0.15",
+        "snips-nlu-metrics>=0.14.1,<0.15",
         "pylint<2",
-        "coverage>=4.4.2,<5.0"
+        "coverage>=4.4.2,<5.0",
+        "checksumdir~=1.1.6",
     ]
 }
 
@@ -75,6 +75,7 @@ setup(name=about["__title__"],
           "Programming Language :: Python :: 3.5",
           "Programming Language :: Python :: 3.6",
           "Programming Language :: Python :: 3.7",
+          "Programming Language :: Python :: 3.8",
           "Topic :: Scientific/Engineering :: Artificial Intelligence",
       ],
       keywords="nlu nlp language machine learning text processing intent",
@@ -83,7 +84,7 @@ setup(name=about["__title__"],
       include_package_data=True,
       entry_points={
           "console_scripts": [
-              "snips-nlu=snips_nlu.__main__:main"
+              "snips-nlu=snips_nlu.cli:main"
           ]
       },
       zip_safe=False)

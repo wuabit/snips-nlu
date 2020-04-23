@@ -4,9 +4,7 @@ CONFIG = {
     "unit_name": "nlu_engine",
     "intent_parsers_configs": [
         {
-            "unit_name": "deterministic_intent_parser",
-            "max_queries": 500,
-            "max_pattern_length": 1000,
+            "unit_name": "lookup_intent_parser",
             "ignore_stop_words": True
         },
         {
@@ -67,7 +65,21 @@ CONFIG = {
                     {
                         "args": {
                             "use_stemming": True,
-                            "tagging_scheme_code": 2
+                            "tagging_scheme_code": 2,
+                            "entity_filter": {
+                                "automatically_extensible": False
+                            }
+                        },
+                        "factory_name": "entity_match",
+                        "offsets": [-2, -1, 0]
+                    },
+                    {
+                        "args": {
+                            "use_stemming": True,
+                            "tagging_scheme_code": 2,
+                            "entity_filter": {
+                                "automatically_extensible": True
+                            }
                         },
                         "factory_name": "entity_match",
                         "offsets": [-2, -1, 0],
@@ -89,8 +101,7 @@ CONFIG = {
                     "min_utterances": 200,
                     "capitalization_ratio": 0.2,
                     "add_builtin_entities_examples": True
-                },
-                "random_seed": None
+                }
             },
             "intent_classifier_config": {
                 "unit_name": "log_reg_intent_classifier",
@@ -119,7 +130,7 @@ CONFIG = {
                         "keep_order": True
                     }
                 },
-                "random_seed": None
+                "noise_reweight_factor": 1,
             }
         }
     ]

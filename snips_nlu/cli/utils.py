@@ -7,10 +7,17 @@ import sys
 from enum import Enum, unique
 
 import requests
-from semantic_version import Version
 
 import snips_nlu
 from snips_nlu import __about__
+from snips_nlu.common.utils import parse_version
+
+try:
+    from importlib import invalidate_caches
+except ImportError:
+    def invalidate_caches():
+        from time import sleep
+        sleep(1)
 
 
 @unique
@@ -21,8 +28,7 @@ class PrettyPrintLevel(Enum):
     SUCCESS = 3
 
 
-FMT = "[%(levelname)s][%(asctime)s.%(msecs)03d][%(name)s]: " \
-      "%(message)s"
+FMT = "[%(levelname)s][%(asctime)s.%(msecs)03d][%(name)s]: %(message)s"
 DATE_FMT = "%H:%M:%S"
 
 
@@ -72,8 +78,9 @@ def get_json(url, desc):
 
 def get_compatibility():
     version = __about__.__version__
-    semver_version = Version(version)
-    minor_version = "%d.%d" % (semver_version.major, semver_version.minor)
+    parsed_version = parse_version(version)
+    minor_version = "%s.%s" % (
+        parsed_version["major"], parsed_version["minor"])
     table = get_json(__about__.__compatibility__, "Compatibility table")
     nlu_table = table["snips-nlu"]
     compatibility = nlu_table.get(version, nlu_table.get(minor_version))
@@ -97,7 +104,11 @@ def install_remote_package(download_url, user_pip_args=None):
     if user_pip_args:
         pip_args.extend(user_pip_args)
     cmd = [sys.executable, '-m', 'pip', 'install'] + pip_args + [download_url]
-    return subprocess.call(cmd, env=os.environ.copy())
+    exit_code = subprocess.call(cmd, env=os.environ.copy())
+    # Don't forget to invalidate caches after dynamically installing modules
+    # https://docs.python.org/3/library/importlib.html#importlib.import_module
+    invalidate_caches()
+    return exit_code
 
 
 def check_resources_alias(resource_name, shortcuts):

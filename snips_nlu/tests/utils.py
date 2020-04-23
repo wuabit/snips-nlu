@@ -47,7 +47,8 @@ class SnipsTest(TestCase):
         return {
             "resources": resources,
             "builtin_entity_parser": builtin_entity_parser,
-            "custom_entity_parser": custom_entity_parser
+            "custom_entity_parser": custom_entity_parser,
+            "random_state": 1
         }
 
     @contextmanager
@@ -75,12 +76,12 @@ class SnipsTest(TestCase):
     @staticmethod
     def writeJsonContent(path, json_dict):
         json_content = json_string(json_dict)
-        with path.open(mode="w") as f:
+        with path.open(mode="w", encoding="utf8") as f:
             f.write(json_content)
 
     @staticmethod
     def writeFileContent(path, content):
-        with path.open(mode="w") as f:
+        with path.open(mode="w", encoding="utf8") as f:
             f.write(unicode_string(content))
 
 
@@ -152,12 +153,12 @@ class MockProcessingUnitMixin(object):
     def persist(self, path):
         path = Path(path)
         path.mkdir()
-        with (path / "metadata.json").open(mode="w") as f:
+        with (path / "metadata.json").open(mode="w", encoding="utf8") as f:
             unit_dict = {"unit_name": self.unit_name, "fitted": self.fitted}
             f.write(json_string(unit_dict))
 
     @classmethod
-    def from_path(cls, path, **shared):  # pylint:disable=unused-argument
+    def from_path(cls, path, **_):
         with (path / "metadata.json").open(encoding="utf8") as f:
             metadata = json.load(f)
         fitted = metadata["fitted"]
@@ -205,8 +206,10 @@ class MockSlotFiller(MockProcessingUnitMixin, SlotFiller):
 
 class EntityParserMock(EntityParser):
 
-    def __init__(self, entities):
+    def __init__(self, entities=None):
         super(EntityParserMock, self).__init__()
+        if entities is None:
+            entities = dict()
         self.entities = entities
 
     def persist(self, path):
@@ -221,4 +224,4 @@ class EntityParserMock(EntityParser):
         return cls(entities)
 
     def _parse(self, text, scope=None):
-        return self.entities.get(text)
+        return self.entities.get(text, [])

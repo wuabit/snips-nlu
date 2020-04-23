@@ -1,26 +1,26 @@
 Snips NLU
 =========
 
-.. image:: https://travis-ci.org/snipsco/snips-nlu.svg?branch=develop
+.. image:: https://travis-ci.org/snipsco/snips-nlu.svg?branch=master
    :target: https://travis-ci.org/snipsco/snips-nlu
 
-.. image:: https://ci.appveyor.com/api/projects/status/github/snipsco/snips-nlu?branch=develop&svg=true
+.. image:: https://ci.appveyor.com/api/projects/status/github/snipsco/snips-nlu?branch=master&svg=true
    :target: https://ci.appveyor.com/project/snipsco/snips-nlu
 
-.. image:: https://img.shields.io/pypi/v/snips-nlu.svg?branch=develop
+.. image:: https://img.shields.io/pypi/v/snips-nlu.svg?branch=master
    :target: https://pypi.python.org/pypi/snips-nlu
 
-.. image:: https://img.shields.io/pypi/pyversions/snips-nlu.svg?branch=develop
+.. image:: https://img.shields.io/pypi/pyversions/snips-nlu.svg?branch=master
    :target: https://pypi.python.org/pypi/snips-nlu
 
-.. image:: https://codecov.io/gh/snipsco/snips-nlu/branch/develop/graph/badge.svg
+.. image:: https://codecov.io/gh/snipsco/snips-nlu/branch/master/graph/badge.svg
    :target: https://codecov.io/gh/snipsco/snips-nlu
 
 .. image:: https://img.shields.io/twitter/url/http/shields.io.svg?style=social
    :target: https://twitter.com/intent/tweet?text=Extract%20meaning%20from%20text%20with%20Snips%20NLU,%20an%20open%20source%20library%20written%20in%20python%20and%20rust&url=https://github.com/snipsco/snips-nlu&via=snips&hashtags=nlu,nlp,machinelearning,python,rustlang
 
 
-`Snips NLU <https://snips-nlu.readthedocs.io>`_ (Natural Language Understanding) is a Python library that allows to parse sentences written in natural language and extracts structured information.
+`Snips NLU <https://snips-nlu.readthedocs.io>`_ (Natural Language Understanding) is a Python library that allows to extract structured information from sentences written in natural language.
 
 Summary
 -------
@@ -255,6 +255,15 @@ Licence
 -------
 
 This library is provided by `Snips <https://www.snips.ai>`_ as Open Source software. See `LICENSE <LICENSE>`_ for more information.
+
+
+Geonames Licence
+----------------
+
+The `snips/city`, `snips/country` and `snips/region` builtin entities rely on
+software from Geonames, which is made available under a Creative Commons Attribution 4.0
+license international. For the license and warranties for Geonames please refer to: https://creativecommons.org/licenses/by/4.0/legalcode.
+
 
 .. _external language resources: https://github.com/snipsco/snips-nlu-language-resources
 .. _forum: https://forum.snips.ai/

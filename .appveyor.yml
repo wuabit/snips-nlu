@@ -1,7 +1,5 @@
 environment:
   matrix:
-    - PYTHON: "C:\\Python27-x64"
-      TARGET: x86_64-pc-windows-msvc
     - PYTHON: "C:\\Python36-x64"
       TARGET: x86_64-pc-windows-msvc
     - PYTHON: "C:\\Python37-x64"
@@ -9,17 +7,12 @@ environment:
 
 branches:
   only:
-  - develop
   - master
-
-cache:
-  # Cache downloaded pip packages and built wheels.
-  - '%LocalAppData%\pip\Cache\http'
-  - '%LocalAppData%\pip\Cache\wheels'
+  - /lts-.*/
 
 install:
   - "%PYTHON%\\python.exe -m pip install wheel"
-  - "%PYTHON%\\python.exe -m pip install -e .[test] --verbose"
+  - "%PYTHON%\\python.exe -m pip install -e .[test] --upgrade --upgrade-strategy eager"
 
 build: false
 

@@ -17,14 +17,15 @@ from snips_nlu.constants import (
     AUTOMATICALLY_EXTENSIBLE, BUILTIN_ENTITY_PARSER, CUSTOM_ENTITY_PARSER,
     ENTITIES, ENTITY_KIND, LANGUAGE, RESOLVED_VALUE, RES_ENTITY,
     RES_INTENT, RES_INTENT_NAME, RES_MATCH_RANGE, RES_PROBA, RES_SLOTS,
-    RES_VALUE, RESOURCES)
+    RES_VALUE, RESOURCES, BYPASS_VERSION_CHECK)
 from snips_nlu.dataset import validate_and_format_dataset
 from snips_nlu.default_configs import DEFAULT_CONFIGS
 from snips_nlu.entity_parser import CustomEntityParser
 from snips_nlu.entity_parser.builtin_entity_parser import (
     BuiltinEntityParser, is_builtin_entity)
-from snips_nlu.exceptions import InvalidInputError, IntentNotFoundError, \
-    LoadingError, IncompatibleModelError
+from snips_nlu.exceptions import (
+    InvalidInputError, IntentNotFoundError, LoadingError,
+    IncompatibleModelError)
 from snips_nlu.intent_parser import IntentParser
 from snips_nlu.pipeline.configs import NLUEngineConfig
 from snips_nlu.pipeline.processing_unit import ProcessingUnit
@@ -117,7 +118,9 @@ class SnipsNLUEngine(ProcessingUnit):
                     parser_config,
                     builtin_entity_parser=self.builtin_entity_parser,
                     custom_entity_parser=self.custom_entity_parser,
-                    resources=self.resources)
+                    resources=self.resources,
+                    random_state=self.random_state,
+                )
 
             if force_retrain or not recycled_parser.fitted:
                 recycled_parser.fit(dataset, force_retrain)
@@ -136,10 +139,12 @@ class SnipsNLUEngine(ProcessingUnit):
         Args:
             text (str): Input
             intents (str or list of str, optional): If provided, reduces the
-                scope of intent parsing to the provided list of intents
+                scope of intent parsing to the provided list of intents.
+                The ``None`` intent is never filtered out, meaning that it can
+                be returned even when using an intents scope.
             top_n (int, optional): when provided, this method will return a
-                list of at most top_n most likely intents, instead of a single
-                parsing result.
+                list of at most ``top_n`` most likely intents, instead of a
+                single parsing result.
                 Note that the returned list can contain less than ``top_n``
                 elements, for instance when the parameter ``intents`` is not
                 None, or when ``top_n`` is greater than the total number of
@@ -310,7 +315,7 @@ class SnipsNLUEngine(ProcessingUnit):
 
         model_json = json_string(model)
         model_path = path / "nlu_engine.json"
-        with model_path.open(mode="w") as f:
+        with model_path.open(mode="w", encoding="utf8") as f:
             f.write(model_json)
 
         if self.fitted:
@@ -346,7 +351,14 @@ class SnipsNLUEngine(ProcessingUnit):
             model = json.load(f)
         model_version = model.get("model_version")
         if model_version is None or model_version != __model_version__:
-            raise IncompatibleModelError(model_version)
+            bypass_version_check = shared.get(BYPASS_VERSION_CHECK, False)
+            if bypass_version_check:
+                logger.warning(
+                    "Incompatible model version found. The library expected "
+                    "'%s' but the loaded engine is '%s'. The NLU engine may "
+                    "not load correctly.", __model_version__, model_version)
+            else:
+                raise IncompatibleModelError(model_version)
 
         dataset_metadata = model["dataset_metadata"]
         if shared.get(RESOURCES) is None and dataset_metadata is not None:

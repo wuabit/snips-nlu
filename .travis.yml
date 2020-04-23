@@ -4,6 +4,10 @@ language: python
 
 matrix:
   include:
+    - python: 3.8
+      env: TOXENV=py38
+      dist: xenial
+      sudo: true
     - python: 3.7
       env: TOXENV=py37
       dist: xenial
@@ -24,5 +28,3 @@ script: tox
 after_success:
   - tox -e coverage-report
   - codecov
-
-cache: pip

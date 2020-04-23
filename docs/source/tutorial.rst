@@ -153,7 +153,7 @@ At this point, we can try to parse something:
 
 .. code-block:: python
 
-    engine.parse(u"Please give me some lights in the entrance !")
+    engine.parse("Please give me some lights in the entrance !")
 
 That will raise a ``NotTrained`` error, as we did not train the engine with
 the dataset that we created.
@@ -174,6 +174,26 @@ the dataset we generated earlier:
 
     engine.fit(dataset)
 
+Note that, by default, training of the NLU engine is non-deterministic:
+training and testing multiple times on the same data may produce different
+outputs.
+
+Reproducible trainings can be achieved by passing a **random seed** to the
+engine:
+
+.. code-block:: python
+
+    seed = 42
+    engine = SnipsNLUEngine(config=CONFIG_EN, random_state=seed)
+    engine.fit(dataset)
+
+
+.. note::
+
+    Due to a ``scikit-learn`` bug fixed in version ``0.21`` we can't guarantee
+    any deterministic behavior if you're using a Python version ``<3.5`` since
+    ``scikit-learn>=0.21`` is only available starting from Python ``>=3.5``
+
 
 Parsing
 -------
@@ -182,7 +202,7 @@ We are now ready to parse:
 
 .. code-block:: python
 
-    parsing = engine.parse(u"Hey, lights on in the lounge !")
+    parsing = engine.parse("Hey, lights on in the lounge !")
     print(json.dumps(parsing, indent=2))
 
 You should get the following output (with a slightly different ``probability``
@@ -222,7 +242,7 @@ to extract the slots while providing the intent:
 
 .. code-block:: python
 
-   parsing = engine.get_slots(u"Hey, lights on in the lounge !", "turnLightOn")
+   parsing = engine.get_slots("Hey, lights on in the lounge !", "turnLightOn")
    print(json.dumps(parsing, indent=2))
 
 This will give you only the extracted slots:
@@ -250,7 +270,7 @@ classification and get the list of intents along with their score:
 
 .. code-block:: python
 
-    intents = engine.get_intents(u"Hey, lights on in the lounge !")
+    intents = engine.get_intents("Hey, lights on in the lounge !")
     print(json.dumps(intents, indent=2))
 
 This should give you something like below:
@@ -331,6 +351,25 @@ intent. Here is the kind of output you should get if you try parsing
 The **None** intent is represented by a ``None`` value in python which
 translates in JSON into a ``null`` value.
 
+.. _intents_filters:
+
+Intents Filters
+---------------
+
+In some cases, you may have some extra information regarding the context in
+which the parsing occurs, and you may already know that some intents won't be
+triggered. To leverage that, you can use *intents filters* and restrict the
+parsing output to a given list of intents:
+
+.. code-block:: python
+
+   parsing = engine.parse("Hey, lights on in the lounge !",
+                           intents=["turnLightOn", "turnLightOff"])
+
+
+This will improve the accuracy of the predictions, as the NLU engine will
+exclude the other intents from the classification task.
+
 Persisting
 ----------
 
@@ -351,7 +390,7 @@ And load it:
 
     loaded_engine = SnipsNLUEngine.from_path("path/to/directory")
 
-    loaded_engine.parse(u"Turn lights on in the bathroom please")
+    loaded_engine.parse("Turn lights on in the bathroom please")
 
 
 Alternatively, you can persist/load the engine as a ``bytearray``:

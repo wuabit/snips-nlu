@@ -4,6 +4,7 @@ import base64
 import json
 import logging
 import math
+import os
 import shutil
 import tempfile
 from builtins import range
@@ -11,17 +12,14 @@ from copy import deepcopy
 from pathlib import Path
 
 from future.utils import iteritems
-from sklearn_crfsuite import CRF
 
 from snips_nlu.common.dataset_utils import get_slot_name_mapping
 from snips_nlu.common.dict_utils import UnupdatableDict
 from snips_nlu.common.io_utils import mkdir_p
 from snips_nlu.common.log_utils import DifferedLoggingMessage, log_elapsed_time
 from snips_nlu.common.utils import (
-    check_persisted_path,
-    check_random_state, fitted_required, json_string)
-from snips_nlu.constants import (
-    DATA, LANGUAGE)
+    check_persisted_path, fitted_required, json_string)
+from snips_nlu.constants import DATA, LANGUAGE
 from snips_nlu.data_augmentation import augment_utterances
 from snips_nlu.dataset import validate_and_format_dataset
 from snips_nlu.exceptions import LoadingError
@@ -32,6 +30,8 @@ from snips_nlu.slot_filler.crf_utils import (
 from snips_nlu.slot_filler.feature import TOKEN_NAME
 from snips_nlu.slot_filler.feature_factory import CRFFeatureFactory
 from snips_nlu.slot_filler.slot_filler import SlotFiller
+
+CRF_MODEL_FILENAME = "model.crfsuite"
 
 logger = logging.getLogger(__name__)
 
@@ -95,7 +95,7 @@ class CRFSlotFiller(SlotFiller):
         """Whether or not the slot filler has already been fitted"""
         return self.slot_name_mapping is not None
 
-    @log_elapsed_time(logger, logging.DEBUG,
+    @log_elapsed_time(logger, logging.INFO,
                       "Fitted CRFSlotFiller in {elapsed_time}")
     # pylint:disable=arguments-differ
     def fit(self, dataset, intent):
@@ -109,7 +109,7 @@ class CRFSlotFiller(SlotFiller):
         Returns:
             :class:`CRFSlotFiller`: The same instance, trained
         """
-        logger.debug("Fitting %s slot filler...", intent)
+        logger.info("Fitting %s slot filler...", intent)
         dataset = validate_and_format_dataset(dataset)
         self.load_resources_if_needed(dataset[LANGUAGE])
         self.fit_builtin_entity_parser_if_needed(dataset)
@@ -128,10 +128,9 @@ class CRFSlotFiller(SlotFiller):
             # No need to train the CRF if the intent has no slots
             return self
 
-        random_state = check_random_state(self.config.random_seed)
         augmented_intent_utterances = augment_utterances(
             dataset, self.intent, language=self.language,
-            resources=self.resources, random_state=random_state,
+            resources=self.resources, random_state=self.random_state,
             **self.config.data_augmentation_config.to_dict())
 
         crf_samples = [
@@ -201,12 +200,11 @@ class CRFSlotFiller(SlotFiller):
 
         cache = [{TOKEN_NAME: token} for token in tokens]
         features = []
-        random_state = check_random_state(self.config.random_seed)
         for i in range(len(tokens)):
             token_features = UnupdatableDict()
             for feature in self.features:
                 f_drop_out = feature.drop_out
-                if drop_out and random_state.rand() < f_drop_out:
+                if drop_out and self.random_state.rand() < f_drop_out:
                     continue
                 value = feature.compute(i, cache)
                 if value is not None:
@@ -355,9 +353,14 @@ class CRFSlotFiller(SlotFiller):
 
         crf_model_file = None
         if self.crf_model is not None:
-            destination = path / Path(self.crf_model.modelfile.name).name
+            crf_model_file = CRF_MODEL_FILENAME
+            destination = path / crf_model_file
             shutil.copy(self.crf_model.modelfile.name, str(destination))
-            crf_model_file = str(destination.name)
+            # On windows, permissions of crfsuite files are correct
+            if os.name == "posix":
+                umask = os.umask(0o022)  # retrieve the system umask
+                os.umask(umask)  # restore the sys umask to its original value
+                os.chmod(str(destination), 0o644 & ~umask)
 
         model = {
             "language_code": self.language,
@@ -368,7 +371,7 @@ class CRFSlotFiller(SlotFiller):
         }
         model_json = json_string(model)
         model_path = path / "slot_filler.json"
-        with model_path.open(mode="w") as f:
+        with model_path.open(mode="w", encoding="utf8") as f:
             f.write(model_json)
         self.persist_metadata(path)
 
@@ -399,16 +402,17 @@ class CRFSlotFiller(SlotFiller):
             slot_filler.crf_model = crf
         return slot_filler
 
+    def _cleanup(self):
+        if self.crf_model is not None:
+            self.crf_model.modelfile.cleanup()
+
     def __del__(self):
-        if self.crf_model is None or self.crf_model.modelfile.name is None:
-            return
-        try:
-            Path(self.crf_model.modelfile.name).unlink()
-        except OSError:
-            pass
+        self._cleanup()
 
 
 def _get_crf_model(crf_args):
+    from sklearn_crfsuite import CRF
+
     model_filename = crf_args.get("model_filename", None)
     if model_filename is not None:
         directory = Path(model_filename).parent
@@ -427,6 +431,8 @@ def _decode_tag(tag):
 
 
 def _crf_model_from_path(crf_model_path):
+    from sklearn_crfsuite import CRF
+
     with crf_model_path.open(mode="rb") as f:
         crf_model_data = f.read()
     with tempfile.NamedTemporaryFile(suffix=".crfsuite", prefix="model",
